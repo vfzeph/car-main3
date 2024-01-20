@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
+
 import joblib
-import numpy as np
-from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -16,6 +15,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
+
 def create_directories():
     output_dir = "model_outputs"
     roc_auc_dir = os.path.join(output_dir, "model_roc_auc")
@@ -23,10 +23,12 @@ def create_directories():
     Path(roc_auc_dir).mkdir(parents=True, exist_ok=True)
     return output_dir, roc_auc_dir
 
+
 def load_data():
     data_path = str(Path(__file__).parents[0] / "data/car_eval_dataset.csv")
     df = pd.read_csv(data_path)
     return df
+
 
 def prepare_data(df):
     data = df.drop(columns=['Unnamed: 0'])
@@ -40,16 +42,19 @@ def prepare_data(df):
     y = data["class"]
     return X, y, label_encoders
 
+
 def save_label_encoders(label_encoders, directory):
     for column, encoder in label_encoders.items():
         encoder_filename = os.path.join(directory, f'{column}_encoder.pkl')
         joblib.dump(encoder, encoder_filename)
+
 
 def scale_data(X_train, X_test):
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     return X_train, X_test
+
 
 def initialize_models():
     models = {
@@ -62,6 +67,7 @@ def initialize_models():
         "KNN": KNeighborsClassifier(n_neighbors=5, weights='uniform')
     }
     return models
+
 
 def train_models(X_train, y_train, models):
     param_grids = {
@@ -90,11 +96,13 @@ def save_models(trained_models, output_dir):
         model_filename = os.path.join(output_dir, f'{name.replace(" ", "_").lower()}_model.pkl')
         joblib.dump(model, model_filename)
 
+
 def generate_confusion_matrices(X_test, y_test, models):
     for name, model in models.items():
         y_pred = model.predict(X_test)
         cm = confusion_matrix(y_test, y_pred)
         print(f"{name} Confusion Matrix:\n{cm}")
+
 
 def calculate_metrics(y_true, y_pred_prob, y_pred):
     if len(np.unique(y_true)) == 2:
@@ -108,7 +116,7 @@ def calculate_metrics(y_true, y_pred_prob, y_pred):
             y_true_class = (y_true == i)
             y_pred_proba_class = y_pred_prob[:, i]
             roc_auc += roc_auc_score(y_true_class, y_pred_proba_class, average='weighted') / n_classes
-            
+
             tn, fp, fn, tp = confusion_matrix(y_true_class, (y_pred == i)).ravel()
             specificity += tn / (tn + fp) / n_classes
 
@@ -123,16 +131,19 @@ def calculate_sensitivity(y_true, y_pred):
     sensitivity = cm[1, 1] / (cm[1, 0] + cm[1, 1])
     return sensitivity
 
+
 def calculate_specificity(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
     specificity = cm[0, 0] / (cm[0, 0] + cm[0, 1])
     return specificity
+
 
 def calculate_fpr(y_true, y_pred_prob, num_classes):
     fpr = {}
     for i in range(num_classes):
         fpr[i], _ = roc_curve((y_true == i), y_pred_prob[:, i])
     return fpr
+
 
 def calculate_fpr_tpr(y_true, y_pred_prob, num_classes):
     fpr = {}
@@ -164,13 +175,31 @@ def evaluate_models(X_test, y_test, trained_models):
     return results
 
 
-
 def print_model_comparison(results):
     print("\nModel Comparison:")
-    print("{:<20} {:<10} {:<10} {:<10} {:<10} {:<10}".format("Model", "ROC AUC", "Accuracy", "Recall", "Precision", "Sensitivity"))
+    print("{:<20} {:<10} {:<10} {:<10} {:<10} {:<10}".format("Model", "ROC AUC", "Accuracy", "Recall", "Precision",
+                                                             "Sensitivity"))
     for model, metrics in results.items():
         print("{:<20} {:<10.2f} {:<10.2f} {:<10.2f} {:<10.2f} {:<10.2f}".format(
-            model, metrics["ROC AUC"], metrics["Accuracy"], metrics["Sensitivity (Recall)"], metrics["Precision"], metrics["Specificity"]))
+            model, metrics["ROC AUC"], metrics["Accuracy"], metrics["Sensitivity (Recall)"], metrics["Precision"],
+            metrics["Specificity"]))
+
+
+def plot_roc_curves(results, roc_auc_dir):
+    plt.figure(figsize=(10, 8))
+    for name, metrics in results.items():
+        fpr = metrics["FPR"]  # Use FPR from the results
+        tpr = metrics["TPR"]
+        for i in range(len(fpr)):
+            plt.plot(fpr[i], tpr[i], label=f'{name} Class {i}')
+
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curves')
+    plt.legend()
+    roc_auc_path = os.path.join(roc_auc_dir, 'model_roc_auc.png')  # Save ROC AUC plot
+    plt.savefig(roc_auc_path)
+    plt.close()
 
 
 def main():
@@ -201,21 +230,8 @@ def main():
     print_model_comparison(results)
 
     # Plot ROC curves
-    plot_roc_curves(results)
+    plot_roc_curves(results, roc_auc_dir)
 
-def plot_roc_curves(results):
-    plt.figure(figsize=(10, 8))
-    for name, metrics in results.items():
-        fpr = metrics["FPR"]  # Use FPR from the results
-        tpr = metrics["TPR"]
-        for i in range(len(fpr)):
-            plt.plot(fpr[i], tpr[i], label=f'{name} Class {i}')
-
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC Curves')
-    plt.legend()
-    plt.show()
 
 if __name__ == '__main__':
     main()

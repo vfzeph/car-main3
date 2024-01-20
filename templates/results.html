@@ -51,7 +51,30 @@
         .back-link:hover {
             background-color: #0056b3;
         }
+
+        /* Style for the image */
+        .confusion-matrix-img {
+            max-width: 100%;
+            display: block;
+            margin: 10px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Style for error message */
+        .error-message {
+            color: #f00;
+            font-weight: bold;
+        }
     </style>
+    <script type="text/javascript">
+        // JavaScript function to handle image loading errors
+        function handleImageError(imageElement, modelName) {
+            imageElement.onerror = "";
+            imageElement.alt = `Failed to load image for ${modelName}`;
+            return true;
+        }
+    </script>
 </head>
 <body>
 <div class="container">
@@ -59,16 +82,26 @@
     {% for model_name, prediction in predictions.items() %}
         <div class="prediction">
             <h3>{{ model_name }}</h3>
-            <p>Prediction: {{ prediction }}</p>
             {% if conf_matrix_plots.get(model_name) %}
-                <img src="{{ url_for('static', filename=conf_matrix_plots[model_name]) }}"
-                     alt="Confusion Matrix for {{ model_name }}">
+                <img class="confusion-matrix-img"
+                     src="{{ url_for('model_output', filename=conf_matrix_plots[model_name]) }}"
+                     alt="Loading Confusion Matrix for {{ model_name }}"
+                     onerror="handleImageError(this, '{{ model_name }}')">
+                </div>
             {% else %}
-                <p>Confusion matrix not available for {{ model_name }}</p>
+                <p class="error-message">Confusion matrix not available for {{ model_name }}</p>
             {% endif %}
         </div>
-    {% endfor %}
 
+    {% endfor %}
+<div class="prediction">
+    <h3>ROC AUC Curve</h3>
+    <img class="roc-auc-img"
+         src="{{ url_for('model_output', filename='model_roc_auc.png') }}"
+         alt="ROC AUC Curve"
+         onerror="handleImageError(this, 'ROC AUC Curve')">
+    <p class="error-message" id="roc-auc-error" style="display: none;">Error: Failed to load ROC AUC
+        Curve</p>
     <a href="{{ url_for('index') }}" class="back-link">Back to Upload</a>
 </div>
 </body>

@@ -1,13 +1,11 @@
 import os
 import joblib
 import pandas as pd
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, send_from_directory
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
-from io import BytesIO
-import base64
 from fit_models import prepare_data
 
 app = Flask(__name__)
@@ -19,11 +17,8 @@ matplotlib.use('Agg')
 # Directory paths
 base_dir = os.path.dirname(os.path.abspath(__file__))
 models_dir = os.path.join(base_dir, "model_outputs")
-scaler_path = os.path.join(models_dir, "scaler.pkl")
-pkr_dir = os.path.join(base_dir, "models")
 
 # Load scaler and models
-scaler = joblib.load(scaler_path) if os.path.exists(scaler_path) else None
 models = {f.split('.')[0]: joblib.load(os.path.join(models_dir, f))
           for f in os.listdir(models_dir) if f.endswith('.pkl') and f != 'scaler.pkl'}
 
@@ -31,12 +26,10 @@ def preprocess_data(data):
     features, _, _ = prepare_data(data)
     return features
 
-
 def make_predictions(processed_data):
     predictions = {model_name: model.predict(processed_data)
                    for model_name, model in models.items()}
     return predictions
-
 
 def generate_confusion_matrix_plot(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
@@ -46,11 +39,9 @@ def generate_confusion_matrix_plot(y_true, y_pred):
     ax.set_xlabel('Predicted Labels')
     ax.set_ylabel('True Labels')
 
-    img = BytesIO()
-    plt.savefig(img, format='png', bbox_inches='tight')
-    img.seek(0)
-    plot_base64 = base64.b64encode(img.getvalue()).decode('utf8')
-    return plot_base64
+    plt.savefig(os.path.join(models_dir, 'conf_matrix.png'), format='png', bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free up memory
+    return os.path.join(models_dir, 'conf_matrix.png')
 
 @app.route('/')
 def index():
@@ -91,10 +82,15 @@ def generate_confusion_matrix_plots(y_test, predictions):
     conf_matrix_plots = {}
     for model_name, model_pred in predictions.items():
         plot_path = os.path.join(models_dir, f"{model_name}_confusion_matrix.png")
-        conf_matrix_plots[model_name] = plot_path
+        plt.figure()  # Create a new figure
+        generate_confusion_matrix_plot(y_test, model_pred)
+        conf_matrix_plots[model_name] = f"{model_name}_confusion_matrix.png"
 
     return conf_matrix_plots
 
+@app.route('/model_outputs/<filename>')
+def model_output(filename):
+    return send_from_directory(models_dir, filename)
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    app.run(port=5002, debug=True)
