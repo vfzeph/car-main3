@@ -57,27 +57,19 @@
 <div class="container">
     <h1>Prediction Results</h1>
     {% for model_name, prediction in predictions.items() %}
-        <div class="container">
-            <h1>Prediction Results</h1>
-            {% for model_name, prediction in predictions.items() %}
-                <div class="prediction">
-                    <h3>{{ model_name }}</h3>
-                    <p>Prediction: {{ prediction }}</p>
-                    {% if conf_matrix_plots[model_name] %}
-                        <img src="{{ url_for('static', filename=conf_matrix_plots[model_name]) }}"
-                             alt="Confusion Matrix for {{ model_name }}">
-                    {% else %}
-                        <p>Confusion matrix not available for {{ model_name }}</p>
-                    {% endif %}
-                </div>
-            {% endfor %}
-
-            <a href="{{ url_for('index') }}" class="back-link">Back to Upload</a>
-        </div>
-
+        <div class="prediction">
+            <h3>{{ model_name }}</h3>
+            <p>Prediction: {{ prediction }}</p>
+            {% if conf_matrix_plots.get(model_name) %}
+                <img src="{{ url_for('static', filename=conf_matrix_plots[model_name]) }}"
+                     alt="Confusion Matrix for {{ model_name }}">
+            {% else %}
+                <p>Confusion matrix not available for {{ model_name }}</p>
+            {% endif %}
         </div>
     {% endfor %}
-<a href="{{ url_for('index') }}" class="back-link">Back to Upload</a>
+
+    <a href="{{ url_for('index') }}" class="back-link">Back to Upload</a>
 </div>
 </body>
 </html>

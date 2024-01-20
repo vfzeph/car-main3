@@ -90,14 +90,9 @@ def generate_confusion_matrix_plots(y_test, predictions):
     """
     conf_matrix_plots = {}
     for model_name, model_pred in predictions.items():
-        cm = confusion_matrix(y_test, model_pred)
-        sns.heatmap(cm, annot=True, fmt='g')
-
         plot_path = os.path.join(models_dir, f"{model_name}_confusion_matrix.png")
-        plt.savefig(plot_path, format='png', bbox_inches='tight')
-        plt.close()
-
         conf_matrix_plots[model_name] = plot_path
+
     return conf_matrix_plots
 
 
