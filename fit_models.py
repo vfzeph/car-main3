@@ -230,7 +230,7 @@ def main():
     print_model_comparison(results)
 
     # Plot ROC curves
-    plot_roc_curves(results, roc_auc_dir)
+    plot_roc_curves(results, output_dir)
 
 
 if __name__ == '__main__':
